@@ -79,7 +79,7 @@ Return your final judgment as a JSON object, ensuring the primary decision key i
 """
 
 class Agent:
-    def __init__(self, name: str, instructions: str, output_type: Type[BaseModel], model: str = "gpt-5"):
+    def __init__(self, name: str, instructions: str, output_type: Type[BaseModel], model: str = "gpt-5-nano"):
         self.name = name
         self.instructions = instructions
         self.output_type = output_type
