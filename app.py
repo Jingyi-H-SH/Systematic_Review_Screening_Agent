@@ -33,8 +33,8 @@ load_dotenv()
 
 # 初始化FastAPI应用
 app = FastAPI(
-    title="文献筛选智能体Web应用",
-    description="一个使用多智能体系统进行文献筛选的交互式Web应用。",
+    title="Screening Tool for Systematic Review",
+    description="An interactive web app for literature screening using a LLM-based multi-agent system.",
     version="2.0.0"
 )
 
@@ -46,7 +46,7 @@ async def get_home_page():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>文献筛选智能体</title>
+        <title>Screening Tool for Systematic Review</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: #f8f9fa; display: flex; justify-content: center; padding: 2rem; }
@@ -71,24 +71,24 @@ async def get_home_page():
     </head>
     <body>
         <div class="container">
-            <h1>文献筛选智能体系统</h1>
+            <h1>Screening Tool for Systematic Review</h1>
             <form id="screening-form">
                 <div class="form-group">
-                    <label for="criteria">1. 输入筛选标准:</label>
+                    <label for="criteria">1. Input Criteria:</label>
                     <textarea id="criteria" name="criteria" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="file">2. 上传待筛选的CSV文件:</label>
+                    <label for="file">2. Upload the CSV file that contains the title and abstracts:</label>
                     <input type="file" id="file" name="file" accept=".csv" required>
                 </div>
-                <button type="submit" id="submit-btn">开始筛选</button>
+                <button type="submit" id="submit-btn">screening started</button>
             </form>
             <div id="status" style="display:none;">
-                <h2>处理状态</h2>
-                <div id="progress">等待任务开始...</div>
+                <h2>processing</h2>
+                <div id="progress">waiting...</div>
             </div>
             <div id="results" style="display:none;">
-                <h2>筛选结果预览 (前5条)</h2>
+                <h2>preview of results</h2>
                 <div id="results-table-container"></div>
                 <div id="download-link"></div>
             </div>
@@ -105,10 +105,10 @@ async def get_home_page():
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 submitBtn.disabled = true;
-                submitBtn.innerText = '处理中...';
+                submitBtn.innerText = 'Processing...';
                 statusDiv.style.display = 'block';
                 resultsDiv.style.display = 'none';
-                progressDiv.innerText = '正在上传文件...';
+                progressDiv.innerText = 'Uploading...';
                 
                 const formData = new FormData(form);
                 const task_id = 'task_' + Date.now();
@@ -118,7 +118,7 @@ async def get_home_page():
                     progressDiv.innerText = event.data;
                 };
                 ws.onclose = () => {
-                    progressDiv.innerText = "连接关闭。";
+                    progressDiv.innerText = "Disconnected";
                 };
 
                 try {
@@ -128,7 +128,7 @@ async def get_home_page():
                     });
 
                     if (response.ok) {
-                        progressDiv.innerText = '✅ 处理完成！正在生成结果...';
+                        progressDiv.innerText = 'Done! Results generating...';
                         const result = await response.json();
                         
                         // 显示结果预览
@@ -139,18 +139,18 @@ async def get_home_page():
                         // 创建下载链接
                         const blob = new Blob([result.full_csv], { type: 'text/csv' });
                         const url = window.URL.createObjectURL(blob);
-                        downloadLinkDiv.innerHTML = `<a href="${url}" download="screened_results.csv">下载完整筛选结果</a>`;
+                        downloadLinkDiv.innerHTML = `<a href="${url}" download="screened_results.csv">Download results</a>`;
                         downloadLinkDiv.style.display = 'block';
                         
                     } else {
                         const error = await response.json();
-                        progressDiv.innerText = `❌ 错误: ${error.detail}`;
+                        progressDiv.innerText = `Error: ${error.detail}`;
                     }
                 } catch (error) {
-                    progressDiv.innerText = `❌ 发生网络错误: ${error.message}`;
+                    progressDiv.innerText = `Error: ${error.message}`;
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtn.innerText = '开始筛选';
+                    submitBtn.innerText = 'Screening';
                     ws.close();
                 }
             });
@@ -189,14 +189,14 @@ async def process_screening_task(df, criteria, task_id):
 @app.post("/screen/")
 async def screen_articles_endpoint(task_id: str, criteria: str = Form(...), file: UploadFile = File(...)):
     if file.content_type != 'text/csv':
-        raise HTTPException(status_code=400, detail="文件类型无效，请上传CSV文件。")
+        raise HTTPException(status_code=400, detail="Invalid file type, please upload a CSV file.")
 
     try:
         contents = await file.read()
         buffer = io.StringIO(contents.decode('utf-8'))
         df = pd.read_csv(buffer)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"无法解析CSV文件: {e}")
+        raise HTTPException(status_code=400, detail=f"Unable to parse CSV file: {e}")
 
     # 在后台运行耗时任务
     asyncio.create_task(process_screening_task(df, criteria, task_id))
