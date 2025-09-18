@@ -89,8 +89,7 @@ Step 3: **Assess the Risk of a False Negative.** State the strongest possible ar
 Step 4: **Perform a Self-Correction Check (Crucial Step).**
    - **If your initial inclination is to 'exclude'**: Challenge yourself. Ask: "Is there *any reasonable, good-faith interpretation* of the abstract that could meet all inclusion criteria, even if it's a stretch?" If the answer is yes, you MUST reverse your inclination to 'include' and add a note.
 Step 5: **Make a Final, Risk-Averse Decision.**
-    - You MUST decide to **'include'** if the Self-Correction Check found a plausible path to inclusion.
-    - Only decide to **'exclude'** if you are highly confident that core concepts are definitively absent.
+   Decide to **'exclude'** if you are highly confident that core concepts are definitively absent.
 Step 6: **Add Notes for Ambiguity.** If your decision is 'include' as a result of the Self-Correction Check, you MUST add a `notes` field with the exact value "need full-text to double-check".
 
 Provide a brief `explanation` summarizing your reasoning. Return a JSON object with the primary key "final_decision".
