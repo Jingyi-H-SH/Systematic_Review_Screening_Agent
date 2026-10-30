@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `owner_id` text DEFAULT 'local-development' NOT NULL;

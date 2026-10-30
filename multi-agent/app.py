@@ -5,7 +5,8 @@ import pandas as pd
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
-from agent_system import run_full_screening_process
+load_dotenv()
+from agent_system import run_screening_process
 import json
 
 # 为WebSockets和任务管理设置
@@ -113,12 +114,12 @@ async def get_home_page():
                 const formData = new FormData(form);
                 const task_id = 'task_' + Date.now();
 
-                const ws = new WebSocket(`wss://${window.location.host}/ws/${task_id}`);
+                const ws = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws/${task_id}`);
                 ws.onmessage = (event) => {
                     progressDiv.innerText = event.data;
                 };
                 ws.onclose = () => {
-                    progressDiv.innerText = "Disconnected";
+                    if (submitBtn.disabled) progressDiv.innerText += " (progress connection closed)";
                 };
 
                 try {
@@ -177,7 +178,11 @@ async def process_screening_task(df, criteria, task_id):
         await manager.send_progress(task_id, message)
     
     # 运行核心筛选逻辑
-    result_df = await run_full_screening_process(df, criteria, progress_callback)
+    try:
+        result_df = await asyncio.wait_for(run_screening_process(df, criteria, progress_callback), timeout=1800)
+    except Exception as exc:
+        tasks[task_id] = {"status": "error", "error": type(exc).__name__ + ": screening failed; check input and API configuration"}
+        return
     
     # 准备结果
     preview_html = result_df.head().to_html(index=False, border=0, classes='table table-striped')
@@ -188,7 +193,7 @@ async def process_screening_task(df, criteria, task_id):
 # --- 4. 主筛选API端点 ---
 @app.post("/screen/")
 async def screen_articles_endpoint(task_id: str, criteria: str = Form(...), file: UploadFile = File(...)):
-    if file.content_type != 'text/csv':
+    if not (file.filename or '').lower().endswith('.csv'):
         raise HTTPException(status_code=400, detail="Invalid file type, please upload a CSV file.")
 
     try:
@@ -198,13 +203,23 @@ async def screen_articles_endpoint(task_id: str, criteria: str = Form(...), file
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Unable to parse CSV file: {e}")
 
+    if not criteria.strip() or not {"title", "abstract"}.issubset(df.columns):
+        raise HTTPException(status_code=400, detail="Criteria and CSV title/abstract columns are required")
+    if len(df) > 500:
+        raise HTTPException(status_code=400, detail="Maximum 500 records per request")
+    if task_id in tasks:
+        raise HTTPException(status_code=409, detail="Task ID already exists")
+    tasks[task_id] = {"status": "running"}
     # 在后台运行耗时任务
     asyncio.create_task(process_screening_task(df, criteria, task_id))
     
     # 等待任务完成
-    while tasks.get(task_id, {}).get("status") != "completed":
+    while tasks.get(task_id, {}).get("status") not in {"completed", "error"}:
         await asyncio.sleep(1)
         
+    if tasks[task_id]['status'] == 'error':
+        failed = tasks.pop(task_id)
+        raise HTTPException(status_code=502, detail=failed['error'])
     result = tasks[task_id]['result']
     del tasks[task_id] # 清理已完成的任务
     return result

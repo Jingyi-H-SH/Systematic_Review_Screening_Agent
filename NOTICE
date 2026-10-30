@@ -1,0 +1,12 @@
+Third-party code retains its original licenses.
+
+The Sites Vite plugin is copyright 2026 OpenAI, licensed under MIT;
+its notice is retained in single-model/scripts/vite/sites-vite-plugin.LICENSE
+and THIRD_PARTY_LICENSES/OpenAI-Sites-MIT.txt.
+
+PDF.js is licensed under Apache-2.0; see
+THIRD_PARTY_LICENSES/PDFjs-Apache-2.0.txt and its source header.
+
+Dependency licenses remain applicable to their respective packages.
+Institutional names and logo assets are not licensed under the code's MIT
+license. This license does not grant trademark rights or imply endorsement.
